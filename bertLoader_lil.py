@@ -13,13 +13,11 @@ from tqdm.auto import tqdm
 
 
 class BertDataset(Dataset):
-    def __init__(self, tr_csr, max_seq_len=200, K=5):
+    def __init__(self, tr, n_items, max_seq_len=200, K=5):
         super(BertDataset, self).__init__()
-        self.n_users, self.n_items = tr_csr.shape
-        self.indices = tr_csr.indices.astype(np.int64)
-        self.indptr = tr_csr.indptr.astype(np.int64)
-        #self.data = tr_csr.data
-        self.user_seen_cnts = np.ediff1d(self.indptr)
+        self.tr = tr 
+        self.n_items = n_items
+        self.user_seen_cnts = np.asarray([len(x) for x in self.tr], dtype=np.int64)
         self.max_seq_len = max_seq_len
         self.K = K
 
@@ -33,7 +31,7 @@ class BertDataset(Dataset):
             i = np.random.randint(0, self.n_users)
             user_seen = self.user_seen_cnts[i]
 
-        row = self.indices[self.indptr[i]:self.indptr[i+1]].copy()
+        row = self.tr[i].copy()
         if user_seen > self.max_seq_len:
             #row = row[np.random.choice(user_seen, self.max_seq_len)]
             row = row[-self.max_seq_len:]
@@ -57,17 +55,15 @@ class BertDataset(Dataset):
 
 
     def __len__(self,):
-        return self.n_users
+        return len(self.tr)
 
     
 class BertFinetTuneDataset():
-    def __init__(self, tr_csr, max_seq_len=200):
+    def __init__(self, tr, n_items,  max_seq_len=200):
         super(BertFinetTuneDataset, self).__init__()
-        self.n_users, self.n_items = tr_csr.shape
-        self.indices = tr_csr.indices.astype(np.int64)
-        self.indptr = tr_csr.indptr.astype(np.int64)
-        #self.data = tr_csr.data
-        self.user_seen_cnts = np.ediff1d(self.indptr)
+        self.n_items = n_items
+        self.tr = tr 
+        self.user_seen_cnts = np.array([len(x) for x in tr] ,dtype=np.int64)
         self.max_seq_len = max_seq_len
 
         self.pads = (1 + self.n_items) * np.ones(self.max_seq_len, dtype=np.int64)
@@ -81,7 +77,7 @@ class BertFinetTuneDataset():
             i = np.random.randint(0, self.n_users)
             user_seen = self.user_seen_cnts[i]
 
-        row = self.indices[self.indptr[i]:self.indptr[i+1]].copy()
+        row = self.tr[i].copy()
         if user_seen > self.max_seq_len:
             row = row[-self.max_seq_len:]
             user_seen = self.max_seq_len
@@ -95,4 +91,4 @@ class BertFinetTuneDataset():
 
 
     def __len__(self,):
-        return self.n_users
+        return len(self.tr)
